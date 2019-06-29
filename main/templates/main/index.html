@@ -1,0 +1,476 @@
+{% extends 'main/base.html' %}
+{% load leaflet_tags %}
+{% load static %}
+{% block head_content %}
+	
+	{% leaflet_js %}
+	{% leaflet_css %}
+	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+		<link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.deep_purple-pink.min.css">
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+		<script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+	<style type="text/css">
+		i:hover{
+			cursor: pointer;
+		}
+		#river-div{
+			margin-left: 3px;
+			border-bottom: 1px soild gainsboro;
+		}
+
+		.river-name{
+			margin-left: 3px;
+			color: indigo;
+		}
+
+		.mini-loader{
+			width: 25px;
+			height: 25px;
+		}
+
+		.elevation-label-var{
+			color: blue;
+		}
+
+		.elevation-var{
+			color: grey;
+		}
+
+		.green{
+			color: green;
+		}
+
+		.red{
+			color: rgb(251, 43, 43);
+		}
+
+		.orange{
+			color: orange;
+		}
+
+		.flood-check-box{
+			min-height: 200px;
+			border: .5px solid grey;
+			background-color: rgb(238, 236, 234);
+			padding: 3%;
+		}
+		
+	</style>
+
+	<script src="{% static 'apis/leaflet-ajax/dist/leaflet.ajax.js' %}"></script>
+	
+	<script type="text/javascript">
+		var marker = L.marker([-0.2,36.0]);
+		var latitude  = '{{latitude}}';
+		var longitude = '{{longitude}}';
+		var Mmap = null;
+		var popUpText = "Kenya"
+		$(document).ready(function(){
+			$('#inspectMe').on('submit', function(e){
+				$(".mini-presdict-loader").show()
+				e.preventDefault();
+				getFloodStatus();
+			});
+			$("#get-flood-status").on('click',function(){
+				$('#inspectMe').submit();
+				$(".mini-presdict-loader").show()
+			});
+			$("#radius-seek").on('change', function(e){
+				console.log($(this).val());
+				$("#radius").html($(this).val());
+				
+			});
+			$("#radius").html($("#radius-seek").val());
+		});
+		function displayCounty(map, options){
+			Mmap = map;
+			var raw_data = '{{selected_country_geojson|escapejs}}'
+			//console.log('{{center}}')
+			var data = JSON.parse(raw_data)
+			var activeCounty = new L.geoJSON(data, {
+
+			});
+			popUpText = "Center of "+data.features[0].properties.name
+			activeCounty.addTo(map);
+			//console.log(data)
+			marker.addTo(map);
+			marker.bindPopup(popUpText).openPopup();
+			map = map
+
+		if(latitude!=0 && longitude!=0){
+			mapMe(latitude, longitude);
+			map.flyTo([latitude, longitude], 6);
+		}
+
+		function geoFindMe() {
+
+			//const status = document.querySelector('#status');
+			//const mapLink = document.querySelector('#map-link');
+
+			//mapLink.href = '';
+			//mapLink.textContent = '';
+
+			function success(position) {
+				latitude  = position.coords.latitude;
+				longitude = position.coords.longitude;
+				status.textContent = '';
+				//mapLink.href = `https://www.openstreetmap.org/#map=18/${latitude}/${longitude}`;
+				//mapLink.textContent = `Latitude: ${latitude} °, Longitude: ${longitude} °`;
+				map.flyTo([latitude, longitude], 12);
+				//map.panTo(marker.getLatLng());
+				popUpText = "My Location"
+				marker.setPopupContent(popUpText)
+				mapMe(latitude, longitude);
+			}
+
+			function error() {
+				status.textContent = 'Unable to retrieve your location';
+			}
+
+			if (!navigator.geolocation) {
+				status.textContent = 'Geolocation is not supported by your browser';
+			} else {
+				status.textContent = 'Locating…';
+				navigator.geolocation.getCurrentPosition(success, error);
+			}
+		}
+
+		document.querySelector('#find-me').addEventListener('click', geoFindMe);
+	}
+
+		function mapMe(latitude, longitude){
+			var newLatLong = new L.LatLng(latitude, longitude);
+			marker.setLatLng(newLatLong);
+			$("#lat").val(latitude);
+			$("#lng").val(longitude);
+			$('#inspectMe').submit();
+		}
+
+		function getFloodStatus(){
+			console.log("getting flood status");
+			$.ajax({
+				url:'flood-state/',
+				type:'GET',
+				data:$("#inspectMe").serialize(),
+				success:function(data){
+					console.log(data.lat, data.lng);
+					var queryArea = new L.geoJSON(data.geometry, {
+
+					});
+					var rivers = new L.geoJSON(JSON.parse(data.nearby_rivers), {}).addTo(Mmap);
+					allRivers = JSON.parse(data.nearby_rivers);
+					queryArea.addTo(Mmap);
+					Mmap.flyTo([data.lat, data.lng], 12);
+					//console.log(data.nearby_rivers);
+					$(".mdl-spinner").css({'display':'none'});
+					$(".loader-text").html('<small>You are viewing the center of the celected country,<br>to view the possibility of a flood around you, <br>press the show my location button</small>')
+					$("#riversDiv").html('');
+					$(".mini-presdict-loader").hide()
+					console.log(allRivers.features.length);
+					$("#number").html(allRivers.features.length);
+					$("#slope").html(data.mean_slope.toFixed(4));
+					$("#msl").html(data.msl.toFixed(4));
+					Object.keys(data.remarks).map(key=>{
+						if(!data.remarks[key] && key !=='alert'){
+							data.remarks[key] = "No"
+						}
+					});
+					$dangerous_river = $("<p>").html(data.remarks['dangerous_rivers']+" Dangerous rivers");
+					$wide_river = $("<p>").html(data.remarks['wide_rivers']+" Wide rivers");
+					$dangerous_slope = $("<p>").html(data.remarks['dangerous_slope']+" Dangerous slope");
+					$spacer = $("<br>");
+					if(data.remarks['alert']){
+						console.log(data.remarks)
+						$("<small>", {'class':'alert-danger red'}).html(data.remarks['alert']);
+						$(".flood-check-box").css({'background-color':"rgb(251, 43, 43)"})
+						$("#flood-state-final").html('<p class="red"><i class="fas fa-times-circle red"></i> Beware of floods happenning<p>');
+					}else{
+						$(".flood-check-box").css({'background-color':"rgb(150, 235, 150)"});
+						$("#flood-state-final").html('<p class="green"><i class="fas fa-check-circle green"></i> Flooding may not happen<p>');
+					}
+					$("#flood-check-box-text").html('');
+					$("#flood-check-box-text").append($dangerous_river, $spacer, $wide_river, $spacer, $dangerous_slope);
+					if(data.rain_prediction['precip_time_iso']){
+						rain_time = new Date(data.rain_prediction['precip_time_iso']);
+						$("#rain_pred").html("<small><i class='fas fa-circle orange'></i> Rains are expected on "+rain_time.toString()+"</small>");
+					}else{
+						$("#rain_pred").html("<small><i class='fas fa-circle green'></i> "+data.rain_prediction['phrase']+"</small>");
+						
+					}
+					
+					if(data.flood_prone){
+						$("#flood_prone").html("<small><i class='fas fa-circle orange'></i> This is a flood prone area<small>");
+					}else{
+						$("#flood_prone").html("<small><i class='fas fa-circle green'></i> This place has no previous flood incidents</small>");
+					}
+					allRivers.features.forEach(element => {
+						$river_div = $("<div>", {'id':'river_div'}).css({'border-bottom':'1px soild gainsboro'});
+						$river_width = $('<span>', {'text':'Width '}).append($("<spa>", {'text':element.properties.width, 'id':'width'}).css({'color':'rgb(30,144,255)'}));
+						$river_depth = $('<span>', {'text':'Depth '}).append($("<span>", {'text':element.properties.depth, 'id':'depth'}).css({'color':'rgb(30,144,255)'}));
+						$river_discharge = $('<span>', {'text':'Discharge '}).append($("<span>", {'text':element.properties.discharge, 'id':'discharge'}).css({'color':'rgb(30,144,255)'}));
+						$spacer = '&nbsp;';
+						$header = $("<span>",{'text':'River '+(allRivers.features.indexOf(element)+1), 'class':'river-name'})
+						$river_div.append($header,$("<br>"), $("<i>", {'class':'fas fa-braille'}).css({'margin-left':'10px'}), $spacer, $river_width, $spacer, $river_depth, $spacer, $river_discharge);
+						$("#riversDiv").append($river_div);
+					});
+				},
+				error: function(error){
+					console.log(error)
+				}
+			});
+		}
+	</script>
+{% endblock head_content %}
+	
+{% block content %}
+<style>
+	.demo-layout-transparent {
+	  /*background: url("{% static 'photos/natural_trees.jpg' %}") center / cover;*/
+	}
+	.demo-layout-transparent .mdl-layout__header,
+	.demo-layout-transparent .mdl-layout__drawer-button {
+	  /* This background is dark, so we set text to white. Use 87% black instead if
+		 your background is light. */
+		 color: rgb(82, 34, 128);
+	}
+
+	.mdl-navigation .mdl-navigation__link{
+		color: rgb(82, 34, 128);
+	}
+
+	main{
+		min-height: 100%;
+	}
+	</style>
+	
+	<div class="demo-layout-transparent mdl-layout mdl-js-layout">
+	  <header class="mdl-layout__header mdl-layout__header--transparent">
+		<div class="mdl-layout__header-row">
+		  <!-- Title -->
+		  <span class="mdl-layout-title">Flood Predictor</span>
+		  <!-- Add spacer, to align navigation to the right -->
+		  <div class="mdl-layout-spacer"></div>
+		  <!-- Navigation -->
+		  <nav class="mdl-navigation">
+			<a class="mdl-navigation__link" href="">Link</a>
+			<a class="mdl-navigation__link" href="">Link</a>
+			<a class="mdl-navigation__link" href="">Link</a>
+			<a class="mdl-navigation__link" href="">Link</a>
+		  </nav>
+		</div>
+		</header>
+		<hr>
+	  <div class="mdl-layout__drawer">
+		<span class="mdl-layout-title">Title</span>
+		<nav class="mdl-navigation">
+		  <a class="mdl-navigation__link" href="">Link</a>
+		  <a class="mdl-navigation__link" href="">Link</a>
+		  <a class="mdl-navigation__link" href="">Link</a>
+		  <a class="mdl-navigation__link" href="">Link</a>
+		</nav>
+	  </div>
+	  <main class="mdl-layout__content">
+		  <div class="container-fluid">
+			  <div class="col-sm">
+					<i id="find-me" class="far fa-compass"> Show my location</i>&nbsp; | &nbsp;
+					<small><a href="{% url 'fldast:report-flood' %}">Report Flood</a></small>&nbsp; | &nbsp;
+					<small><a href="{% url 'fldast:add-flood-prone-area' %}"><i class="fas fa-plus"></i> Add prone area</a></small>
+					
+					<p id = "status"></p>
+					<a id = "map-link" target="_blank"></a>
+
+
+			  </div>
+				<!--Photo by Erik Kaha on Unsplash-->
+				<!-- Uses a transparent header that draws on top of the layout's background -->
+				<div class="col-sm">
+					<div class="row">
+							<div class="mdl-tabs mdl-js-tabs mdl-js-ripple-effect col-sm">
+									<div class="mdl-tabs__tab-bar">
+									  <small><a href="#about-panel" class="mdl-tabs__tab is-active">Live</a></small>
+									  <small><a href="#members-panel" class="mdl-tabs__tab">Prone Areas</a></small>
+									  <small><a href="#albums-panel" class="mdl-tabs__tab">Predictions</a></small>
+									</div>
+									<div class="mdl-tabs__panel is-active" id="about-panel">
+										<div class="row">
+											<div class="col-sm">
+													<p style="color:rgb(240, 93, 93)"><b>Currently Happenning({{recent_incidents|length}})</b></p>
+													{% for incid in recent_incidents %}
+														<p><i class="far fa-dot-circle" style="color: rgb(255, 0, 43)"></i>&nbsp;{{incid.name}} - <small>&nbsp;{{incid.date}}</small></p>
+													{% endfor %}
+											</div>
+											<div class="loader"><div class="mdl-spinner mdl-spinner--single-color mdl-js-spinner is-active mt-5"></div><br>
+											&nbsp;<span class="loader-text" style="color:blue">Loading details...</span></div>
+										</div>
+										
+									</div>
+									<div class="mdl-tabs__panel" id="members-panel">
+										<div class="row mt-4">
+											<div class="col-sm">
+													<h5>Flood Prone areas in Kenya,  {{prone_area|length}}</h5>
+													<ul>
+														{% for area in prone_area %}
+															<li><span>{{area}}</span></li>
+														{% endfor %}
+													</ul>
+											</div>
+											
+										</div>
+									  
+									</div>
+									
+									<div class="mdl-tabs__panel" id="albums-panel">
+										<div class="row">
+											<div class="col">
+													<h5>Chances of flood in this Area</h5>
+													<b><span id="number"></span>&nbsp;Rivers in this area</b><hr>
+													<div id="riversHolder">
+														<div id="riversDiv"></div>
+													</div>
+													<div>
+														<h5>General Remarks</h5>
+														<p>Number of flood occurences</p>
+														<span id="flood_prone"></span><br>
+														<span id="rain_pred"></span>
+													</div>
+											</div>
+
+											
+											<div class="col mt-4">
+													<em>Search Radius</em>
+													<form action="flood-state/" id="inspectMe">
+														<input type="hidden" id="lat" name="lat">
+														<input type="hidden" id="lng" name="lng">
+														<input id="radius-seek" name="radius" class="mdl-slider mdl-js-slider" type="range"
+															min="3" max="10" value="3" tabindex="0"><small id="radius"></small><small>&nbsp;Km</small>
+															&nbsp;<i class="fas fa-sync-alt" id="get-flood-status"></i><img src="{% static 'photos/loading.gif' %}" alt="loader" class="mini-loader mini-presdict-loader">
+													</form>
+													<h6><small><i class="fas fa-mountain" style="color:indigo"></i></small>Elevation details</h6>
+													<span class="elevation-label-var">Mean Sea Level : <span id="msl" class="elevation-var"></span></span><br>
+													<span class="elevation-label-var">General Slope : <span id="slope" class="elevation-var"></span></span>
+												
+													<div>
+														<h6> <small><i class="fas fa-water" style="color: blue"></i></small> Flood Check:</h6>
+														<div id="flood-checks" class="flood-check-box">
+															<div id="flood-check-box-text"></div><br>
+															<div id="flood-state-final"></div>
+														</div>
+													</div>
+											</div>
+										</div>
+										<hr>
+									</div>
+								  </div>
+	
+							<div class="col-sm map-div">
+								{% leaflet_map 'map' callback="window.displayCounty" %}
+								<div class="mdl-selectfield mdl-js-selectfield country-select">
+										<select class="mdl-selectfield__select" id="country-drpdwn" name="country">
+											{% for country in countries %}
+											<option value="option1">{{country.name}}</option>
+											{% endfor %}
+											
+										</select>
+										<label class="mdl-selectfield__label" for="country">Select Country</label>
+									</div>
+								
+							</div>
+					</div>
+
+					<button type="button" class="mdl-button show-modal">Show Modal</button>
+					<dialog class="mdl-dialog">
+						<div class="mdl-dialog__content">
+							<p>
+								Allow this site to collect usage data to improve your experience?
+							</p>
+						</div>
+						<div class="mdl-dialog__actions mdl-dialog__actions--full-width">
+							<button type="button" class="mdl-button">Agree</button>
+							<button type="button" class="mdl-button close">Disagree</button>
+						</div>
+					</dialog>
+					<script>
+						var dialog = document.querySelector('dialog');
+						var showModalButton = document.querySelector('.show-modal');
+						if (! dialog.showModal) {
+							dialogPolyfill.registerDialog(dialog);
+						}
+						showModalButton.addEventListener('click', function() {
+							dialog.showModal();
+						});
+						dialog.querySelector('.close').addEventListener('click', function() {
+							dialog.close();
+						});
+					</script>
+				</div>
+
+				
+		  </div>
+	  </main>
+	  <div>
+			<footer class="mdl-mega-footer">
+					<div class="mdl-mega-footer__middle-section">
+				  
+					  <div class="mdl-mega-footer__drop-down-section">
+						<input class="mdl-mega-footer__heading-checkbox" type="checkbox" checked>
+						<h1 class="mdl-mega-footer__heading">Features</h1>
+						<ul class="mdl-mega-footer__link-list">
+						  <li><a href="#">About</a></li>
+						  <li><a href="#">Terms</a></li>
+						  <li><a href="#">Partners</a></li>
+						  <li><a href="#">Updates</a></li>
+						</ul>
+					  </div>
+				  
+					  <div class="mdl-mega-footer__drop-down-section">
+						<input class="mdl-mega-footer__heading-checkbox" type="checkbox" checked>
+						<h1 class="mdl-mega-footer__heading">Details</h1>
+						<ul class="mdl-mega-footer__link-list">
+						  <li><a href="#">Specs</a></li>
+						  <li><a href="#">Tools</a></li>
+						  <li><a href="#">Resources</a></li>
+						</ul>
+					  </div>
+				  
+					  <div class="mdl-mega-footer__drop-down-section">
+						<input class="mdl-mega-footer__heading-checkbox" type="checkbox" checked>
+						<h1 class="mdl-mega-footer__heading">Technology</h1>
+						<ul class="mdl-mega-footer__link-list">
+						  <li><a href="#">How it works</a></li>
+						  <li><a href="#">Patterns</a></li>
+						  <li><a href="#">Usage</a></li>
+						  <li><a href="#">Products</a></li>
+						  <li><a href="#">Contracts</a></li>
+						</ul>
+					  </div>
+				  
+					  <div class="mdl-mega-footer__drop-down-section">
+						<input class="mdl-mega-footer__heading-checkbox" type="checkbox" checked>
+						<h1 class="mdl-mega-footer__heading">FAQ</h1>
+						<ul class="mdl-mega-footer__link-list">
+						  <li><a href="#">Questions</a></li>
+						  <li><a href="#">Answers</a></li>
+						  <li><a href="#">Contact us</a></li>
+						</ul>
+					  </div>
+				  
+					</div>
+				  
+					<div class="mdl-mega-footer__bottom-section">
+					  <div class="mdl-logo">Title</div>
+					  <ul class="mdl-mega-footer__link-list">
+						<li><a href="#">Help</a></li>
+						<li><a href="#">Privacy & Terms</a></li>
+					  </ul>
+					</div>
+				  
+				  </footer>
+		</div>
+		
+		
+	</div>
+	
+	
+{% endblock content %}
+

@@ -1,0 +1,101 @@
+{% extends 'main/base.html' %}
+{% load leaflet_tags %}
+{% load widget_tweaks %}
+{% load static %}
+{% block head_content %}
+	
+	{% leaflet_js %}
+    {% leaflet_css %}
+    {% leaflet_css plugins="forms" %}
+    {% leaflet_js plugins="forms" %}
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.deep_purple-pink.min.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+    <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <style>
+        .mdl-card{
+            width: 100%;
+        }
+    </style>
+{% endblock head_content %}
+
+{% block content %}
+<div class="container-fluid">
+		<div class="justify-content-center">
+			<!-- Simple Textfield -->
+			<form action="{% url 'fldast:add-flood-prone-area' %}" method="POST" class="mt-5">
+                {% csrf_token %}
+				<div class="demo-card-wide mdl-card mdl-shadow--2dp">
+					<div class="mdl-card__title">
+						<h2 class="mdl-card__title-text">New Flood Prone Area</h2>
+					</div>
+					<div class="mdl-card__supporting-text">
+						Add Flood prone area, make people to be alert
+                    </div>
+                    <div class="row mr-3 ml-3">
+                        <div class="col">
+                            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                                    {% render_field form.name class="mdl-textfield__input" %}
+                                    <label class="mdl-textfield__label" for="{{form.name.name}}" style="margin-bottom: 0px">{{ form.name.name }}</label>
+                                    {% if form.name.help_text %}
+                                        <small class="form-text text-muted">{{ form.name.help_text }}</small>
+                                    {% endif %}
+                                    {% for error in form.name.errors %}
+                                        <span class="help-block">{{ error }}</span>
+                                    {% endfor %}
+                                </div><br>
+        
+                                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                                    {% render_field form.description class="mdl-textfield__input" %}
+                                    <label class="mdl-textfield__label" for="{{form.description.name}}" style="margin-bottom: 0px">{{ form.description.name }}</label>
+                                    {% if form.description.help_text %}
+                                        <small class="form-text text-muted">{{ form.description.help_text }}</small>
+                                    {% endif %}
+                                    {% for error in form.description.errors %}
+                                        <span class="help-block">{{ error }}</span>
+                                    {% endfor %}
+                                </div>    
+                            </div>
+
+                        <div class="col">
+                                <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                                        {% render_field form.msl class="mdl-textfield__input" %}
+                                        <label class="mdl-textfield__label" for="{{form.msl.name}}" style="margin-bottom: 0px">{{ form.msl.name }}</label>
+                                        {% if form.name.help_text %}
+                                            <small class="form-text text-muted">{{ form.msl.help_text }}</small>
+                                        {% endif %}
+                                        {% for error in form.msl.errors %}
+                                            <span class="help-block">{{ error }}</span>
+                                        {% endfor %}
+                                    </div><br>
+
+
+                                    <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                                            {% render_field form.avg_rainfall class="mdl-textfield__input" %}
+                                            <label class="mdl-textfield__label" for="{{form.avg_rainfall.name}}" style="margin-bottom: 0px">{{ form.avg_rainfall.name }}</label>
+                                            {% if form.name.help_text %}
+                                                <small class="form-text text-muted">{{ form.avg_rainfall.help_text }}</small>
+                                            {% endif %}
+                                            {% for error in form.avg_rainfall.errors %}
+                                                <span class="help-block">{{ error }}</span>
+                                            {% endfor %}
+                                        </div>
+                        </div>
+
+                        <div class="col">
+                            {% render_field form.geom %}
+                            
+                        </div>
+                        <div class="form-group  mt-2" style="position: relative; bottom: 0;">
+                                <button class="btn btn-outline-info" type="submit">Add</button>
+                            </div>
+                    </div>
+                
+                </div>
+
+					
+			</form>  
+		</div>
+		
+	</div>
+{% endblock content %}

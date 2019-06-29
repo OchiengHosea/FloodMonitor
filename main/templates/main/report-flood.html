@@ -1,0 +1,20 @@
+{% extends 'main/base.html' %}
+{% load leaflet_tags %}
+
+{% block head_content %}
+    {% leaflet_css plugins="forms" %}
+    {% leaflet_js plugins="forms" %}
+{% endblock head_content %}
+
+{% block content %}
+    <div class="container">
+        <h1>Thank you for reaching out, Kindly fill this form </h1>
+        {{ object }}
+        <form method="POST" class="form">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <input type="submit" value="Report">
+        </form>
+    </div>
+    
+{% endblock content %}

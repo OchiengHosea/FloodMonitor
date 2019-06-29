@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		{% load bootstrap4 %}
+		{% bootstrap_css %}
+		{% bootstrap_javascript jquery='full' %}
+		{% bootstrap_messages %}
+		
+		{% block head_content %}
+		<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+		<link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.deep_purple-pink.min.css">
+		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+		<script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+		{% endblock head_content %}
+
+		{% if title %}
+			<title>fldmn - {{title}}</title>
+		{% else %}
+			<title>fldmn</title>
+		{% endif %}
+	</head>
+
+	<body>
+		{% block content %}{% endblock %}
+	</body>
+</html>
